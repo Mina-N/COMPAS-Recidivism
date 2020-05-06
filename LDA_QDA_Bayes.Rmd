@@ -1,0 +1,179 @@
+---
+title: "DM Group 19"
+author: "Mina Narayanan"
+date: "5/14/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(ISLR)
+library(MASS)
+library(klaR) 
+library(knitr)
+library(glmnet)
+library(gam)
+library(plyr)
+library(reshape)
+```
+
+# To filter compas two years
+
+Subset of columns used in original analysis are:
+raw_data, age, c_charge_degree, race, age_cat, score_text, sex, priors_count, days_b_screening_arrest, decile_score, is_recid, two_year_recid, c_jail_in, c_jail_out
+
+```{r}
+raw_data <- read.csv("./compas-scores-two-years.csv")
+nrow(raw_data)
+
+compas_non_violent <- raw_data %>% 
+  filter(days_b_screening_arrest <= 30) %>%
+  filter(days_b_screening_arrest >= -30) %>%
+  filter(is_recid != -1) %>%
+  filter(c_charge_degree != "O") %>%
+  filter(score_text != 'N/A')
+nrow(compas_non_violent)
+
+
+compas_non_violent$race_num <- as.numeric(compas_non_violent$race)
+compas_non_violent$sex_num <- as.numeric(compas_non_violent$sex)
+  
+
+
+#model <- glm(score_factor ~ gender_factor + age_factor + race_factor +
+#                            priors_count + crime_factor + two_year_recid, family="binomial", data=df)
+#summary(model)
+```
+
+# To filter compas two years violent 
+
+Subset of columns used in original analysis are:
+raw_data, age, c_charge_degree, race, age_cat, v_score_text, sex, priors_count, 
+days_b_screening_arrest, v_decile_score, is_recid, two_year_recid
+
+```{r}
+raw_data.2 <- read.csv("./compas-scores-two-years-violent.csv")
+nrow(raw_data.2)
+
+compas_violent <- raw_data.2 %>%
+        filter(days_b_screening_arrest <= 30) %>%
+        filter(days_b_screening_arrest >= -30) %>% 
+        filter(is_recid != -1) %>%
+        filter(c_charge_degree != "O") %>%
+        filter(v_score_text != 'N/A')
+nrow(compas_violent)
+
+#sapply(compas_non_violent, FUN=class)
+#sapply(compas_violent, FUN=class)
+
+#identical(compas_non_violent, compas_violent)
+#compas_non_violent$age == compas_violent$age
+
+
+compas_violent$race_num <- as.numeric(compas_violent$race)
+compas_violent$sex_num <- as.numeric(compas_violent$sex)
+
+```
+
+# LDA
+```{r}
+# TODO: feature selection?
+
+# TODO: Split into training and test data vs. cox proportional hazard model - should the output be score_text?
+index = sample( 1:nrow( compas_non_violent ), round( nrow( compas_non_violent )*0.6 ), replace = FALSE )
+train = compas_non_violent[ index, ]
+test = compas_non_violent[ -index, ]
+
+
+# Nonviolent
+nonviolent.lda <- lda(score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent)
+nonviolent.lda
+plot(nonviolent.lda, col=as.numeric(compas_non_violent$score_text))
+
+partimat(score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent, method="lda", plot.matrix=TRUE)
+lda.probs=predict(nonviolent.lda,type="response")
+ct <- table(compas_non_violent$score_text, lda.probs$class)
+ct
+# Accuracy is 3987/6172 = 64.598%
+# COMPAS system's concordance is 63.6%
+
+
+# Violent
+violent.lda <- lda(v_score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent)
+violent.lda
+plot(violent.lda, col=as.numeric(compas_non_violent$v_score_text))
+
+partimat(v_score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent, method="lda", plot.matrix=TRUE)
+lda.probs=predict(violent.lda,type="response")
+ct <- table(compas_non_violent$v_score_text, lda.probs$class)
+ct
+# Accuracy is 4470/6172 = 72.424%
+# COMPAS's violent recidivism score has a slightly higher overall concordance score of 65.1%
+
+
+```
+
+# QDA
+```{r}
+# Nonviolent
+nonviolent.qda <- qda(score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent)
+nonviolent.qda
+qda.probs=predict(nonviolent.qda,type="response")
+ct <- table(compas_non_violent$score_text, qda.probs$class)
+ct
+# Accuracy is 3843/6172 = 62.265%
+# COMPAS system's concordance is 63.6%
+
+graphics.off()
+par("mar")
+par(mar=c(1,1,1,1))
+partimat(score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent, method="qda", plot.matrix=TRUE)
+
+
+# Violent
+violent.qda <- qda(v_score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent)
+violent.qda
+qda.probs=predict(violent.qda,type="response")
+ct <- table(compas_non_violent$v_score_text, qda.probs$class)
+ct
+# Accuracy is 4212/6172 = 68.244%
+# COMPAS's violent recidivism score has a slightly higher overall concordance score of 65.1%
+
+```
+
+# Naive Bayes
+```{r}
+# Nonviolent 
+nonviolent.nb <- NaiveBayes(score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent, usekernel=TRUE)
+bayes.probs=predict(nonviolent.nb, type="response")
+out <- table(compas_non_violent$score_text, bayes.probs$class)
+out
+# Accuracy of 3560/6127 = 58.103%
+# COMPAS system's concordance is 63.6%
+
+# Violent
+violent.nb <- NaiveBayes(v_score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent, usekernel=TRUE)
+bayes.probs=predict(violent.nb, type="response")
+out <- table(compas_non_violent$v_score_text, bayes.probs$class)
+out
+# Accuracy of 4166/6127 = 67.994%
+# COMPAS's violent recidivism score has a slightly higher overall concordance score of 65.1%
+```
+
+
+# RAI
+```{r}
+rai <- function(type=c("lda", "qda", "bayes", "rf", "dec", "reg")) {
+  type <- match.arg(type)
+  if (type == "lda") {
+  }
+}
+```
+
+
+
+
+
+

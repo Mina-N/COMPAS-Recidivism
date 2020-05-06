@@ -1,0 +1,49 @@
+---
+title: "DM Group 19"
+author: "Yang Le Lim"
+date: "4/27/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# To filter compas two years
+
+Subset of columns used in original analysis are:
+raw_data, age, c_charge_degree, race, age_cat, score_text, sex, priors_count, days_b_screening_arrest, decile_score, is_recid, two_year_recid, c_jail_in, c_jail_out
+
+```{r}
+raw_data <- read.csv("./compas-scores-two-years.csv")
+nrow(raw_data)
+
+compas_non_violent <- raw_data %>% 
+  filter(days_b_screening_arrest <= 30) %>%
+  filter(days_b_screening_arrest >= -30) %>%
+  filter(is_recid != -1) %>%
+  filter(c_charge_degree != "O") %>%
+  filter(score_text != 'N/A')
+nrow(compas_non_violent)
+```
+
+# To filter compas two years violent 
+
+Subset of columns used in original analysis are:
+raw_data, age, c_charge_degree, race, age_cat, v_score_text, sex, priors_count, 
+days_b_screening_arrest, v_decile_score, is_recid, two_year_recid
+
+```{r}
+raw_data.2 <- read.csv("./compas-scores-two-years-violent.csv")
+nrow(raw_data.2)
+
+compas_violent <- raw_data.2 %>%
+        filter(days_b_screening_arrest <= 30) %>%
+        filter(days_b_screening_arrest >= -30) %>% 
+        filter(is_recid != -1) %>%
+        filter(c_charge_degree != "O") %>%
+        filter(v_score_text != 'N/A')
+nrow(compas_violent)
+
+```
