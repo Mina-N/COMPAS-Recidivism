@@ -47,35 +47,6 @@ compas_non_violent$sex_num <- as.numeric(compas_non_violent$sex)
 #summary(model)
 ```
 
-# To filter compas two years violent 
-
-Subset of columns used in original analysis are:
-raw_data, age, c_charge_degree, race, age_cat, v_score_text, sex, priors_count, 
-days_b_screening_arrest, v_decile_score, is_recid, two_year_recid
-
-```{r}
-raw_data.2 <- read.csv("./compas-scores-two-years-violent.csv")
-nrow(raw_data.2)
-
-compas_violent <- raw_data.2 %>%
-        filter(days_b_screening_arrest <= 30) %>%
-        filter(days_b_screening_arrest >= -30) %>% 
-        filter(is_recid != -1) %>%
-        filter(c_charge_degree != "O") %>%
-        filter(v_score_text != 'N/A')
-nrow(compas_violent)
-
-#sapply(compas_non_violent, FUN=class)
-#sapply(compas_violent, FUN=class)
-
-#identical(compas_non_violent, compas_violent)
-#compas_non_violent$age == compas_violent$age
-
-
-compas_violent$race_num <- as.numeric(compas_violent$race)
-compas_violent$sex_num <- as.numeric(compas_violent$sex)
-
-```
 
 # LDA
 ```{r}
