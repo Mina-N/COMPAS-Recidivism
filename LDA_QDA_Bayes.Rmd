@@ -36,51 +36,57 @@ compas_non_violent <- raw_data %>%
   filter(score_text != 'N/A')
 nrow(compas_non_violent)
 
+compas_non_violent <- mutate(compas_non_violent, crime_factor = factor(c_charge_degree)) %>%
+      mutate(age_factor = as.factor(age_cat)) %>%
+      within(age_factor <- relevel(age_factor, ref = 1)) %>%
+      mutate(race_factor = factor(race)) %>%
+      within(race_factor <- relevel(race_factor, ref = 3)) %>%
+      mutate(gender_factor = factor(sex, labels= c("Female","Male"))) %>%
+      within(gender_factor <- relevel(gender_factor, ref = 2)) %>%
+      mutate(score_factor = factor(score_text != "Low", labels = c("LowScore","HighScore")))
 
-compas_non_violent$race_num <- as.numeric(compas_non_violent$race)
-compas_non_violent$sex_num <- as.numeric(compas_non_violent$sex)
+levels(compas_non_violent$race_factor)
+levels (compas_non_violent$race)
+levels(compas_non_violent$score_text)
+levels(compas_non_violent$score_factor)
+
+#compas_non_violent$race_num <- as.numeric(compas_non_violent$race)
+#compas_non_violent$sex_num <- as.numeric(compas_non_violent$sex)
   
-
-
-#model <- glm(score_factor ~ gender_factor + age_factor + race_factor +
-#                            priors_count + crime_factor + two_year_recid, family="binomial", data=df)
-#summary(model)
 ```
 
 
 # LDA
 ```{r}
-# TODO: feature selection?
+# TODO: Feature selection?
 
-# TODO: Split into training and test data vs. cox proportional hazard model - should the output be score_text?
+# TODO: Apply training and test ratios
 index = sample( 1:nrow( compas_non_violent ), round( nrow( compas_non_violent )*0.6 ), replace = FALSE )
-train = compas_non_violent[ index, ]
-test = compas_non_violent[ -index, ]
+train = compas_non_violent[ index, ] # About 60% of the observations
+test = compas_non_violent[ -index, ] # About 40% of the observations
 
 
 # Nonviolent
-nonviolent.lda <- lda(score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent)
+nonviolent.lda <- lda(is_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent)
 nonviolent.lda
-plot(nonviolent.lda, col=as.numeric(compas_non_violent$score_text))
+plot(nonviolent.lda, col=as.numeric(compas_non_violent$is_recid))
 
-partimat(score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent, method="lda", plot.matrix=TRUE)
 lda.probs=predict(nonviolent.lda,type="response")
-ct <- table(compas_non_violent$score_text, lda.probs$class)
+ct <- table(compas_non_violent$is_recid, lda.probs$class)
 ct
-# Accuracy is 3987/6172 = 64.598%
+# Accuracy is 3987/6172 = 97.067%
 # COMPAS system's concordance is 63.6%
 
 
 # Violent
-violent.lda <- lda(v_score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent)
+violent.lda <- lda(is_violent_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent)
 violent.lda
-plot(violent.lda, col=as.numeric(compas_non_violent$v_score_text))
+plot(violent.lda, col=as.numeric(compas_non_violent$is_violent_recid))
 
-partimat(v_score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent, method="lda", plot.matrix=TRUE)
 lda.probs=predict(violent.lda,type="response")
-ct <- table(compas_non_violent$v_score_text, lda.probs$class)
+ct <- table(compas_non_violent$is_violent_recid, lda.probs$class)
 ct
-# Accuracy is 4470/6172 = 72.424%
+# Accuracy is 5481/6172 = 88.804%
 # COMPAS's violent recidivism score has a slightly higher overall concordance score of 65.1%
 
 
