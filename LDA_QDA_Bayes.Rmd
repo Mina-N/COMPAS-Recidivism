@@ -17,6 +17,7 @@ library(glmnet)
 library(gam)
 library(plyr)
 library(reshape)
+library(boot)
 ```
 
 # To filter compas two years
@@ -44,50 +45,82 @@ compas_non_violent <- mutate(compas_non_violent, crime_factor = factor(c_charge_
       mutate(gender_factor = factor(sex, labels= c("Female","Male"))) %>%
       within(gender_factor <- relevel(gender_factor, ref = 2)) %>%
       mutate(score_factor = factor(score_text != "Low", labels = c("LowScore","HighScore")))
-
-levels(compas_non_violent$race_factor)
-levels (compas_non_violent$race)
-levels(compas_non_violent$score_text)
-levels(compas_non_violent$score_factor)
-
-#compas_non_violent$race_num <- as.numeric(compas_non_violent$race)
-#compas_non_violent$sex_num <- as.numeric(compas_non_violent$sex)
-  
 ```
 
 
-# LDA
+# LDA Analysis
 ```{r}
-# TODO: Feature selection?
+# TODO: Feature selection/see what variables are important/build density plots
 
-# TODO: Apply training and test ratios
+# Check for correlation between input variables
+compas.var.names <- c("priors_count", "juv_fel_count", "juv_misd_count", "juv_other_count")
+pairs(compas_non_violent[,compas.var.names])
+round(cor(compas_non_violent[,compas.var.names]), 3)
+
+# Function taken from ?pairs Example section.  
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
+{
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    r <- abs(cor(x, y))
+    txt <- format(c(r, 0.123456789), digits = digits)[1]
+    txt <- paste0(prefix, txt)
+    if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+    text(0.5, 0.5, txt, cex = pmax(1, cex.cor * r))
+}
+
+# Use panel.cor to display correlations in lower panel
+# No obvious correlation between any predictors, which is good
+pairs(compas_non_violent[,compas.var.names], lower.panel = panel.cor)
+
+# Create train and test datasets
 index = sample( 1:nrow( compas_non_violent ), round( nrow( compas_non_violent )*0.6 ), replace = FALSE )
 train = compas_non_violent[ index, ] # About 60% of the observations
 test = compas_non_violent[ -index, ] # About 40% of the observations
 
+# NONVIOLENT LDA MODEL
+nonviolent.lda <- lda(is_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + juv_fel_count + juv_misd_count + juv_other_count, data=train)
+nonviolent.lda.train = predict(nonviolent.lda, type="response")
+tab <- table(nonviolent.lda.train$class, train$is_recid)
+tab
 
-# Nonviolent
-nonviolent.lda <- lda(is_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent)
-nonviolent.lda
-plot(nonviolent.lda, col=as.numeric(compas_non_violent$is_recid))
-
-lda.probs=predict(nonviolent.lda,type="response")
-ct <- table(compas_non_violent$is_recid, lda.probs$class)
-ct
-# Accuracy is 3987/6172 = 97.067%
+# Training Accuracy for Nonviolent LDA model is 2490/3703 = 67.243% (optimistic estimate)
 # COMPAS system's concordance is 63.6%
 
+# Test the Nonviolent LDA model
+nonviolent.lda.test = predict(nonviolent.lda, newdata=test)
+tab <- table(nonviolent.lda.test$class, test$is_recid)
+tab
 
-# Violent
-violent.lda <- lda(is_violent_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent)
-violent.lda
-plot(violent.lda, col=as.numeric(compas_non_violent$is_violent_recid))
+# Test Accuracy for Nonviolent LDA model is 1652/2469 = 66.910% (note that this is less than the training accuracy)
 
-lda.probs=predict(violent.lda,type="response")
-ct <- table(compas_non_violent$is_violent_recid, lda.probs$class)
-ct
-# Accuracy is 5481/6172 = 88.804%
+# TODO: Run a Cox model to compare the accuracy of the nonviolent LDA model to COMPAS' model
+
+# TODO: Determine whether the model is equally predictive across race, age, and gender
+
+
+
+ 
+# VIOLENT LDA MODEL
+violent.lda <- lda(is_violent_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + juv_fel_count + juv_misd_count + juv_other_count, data=train)
+violent.lda.train = predict(violent.lda, type="response")
+tab <- table(violent.lda.train$class, train$is_recid)
+tab
+
+# Training Accuracy for Violent LDA model is 1947/3703 = 52.58% (optimistic estimate)
 # COMPAS's violent recidivism score has a slightly higher overall concordance score of 65.1%
+
+# Test the Violent LDA model
+violent.lda.test = predict(violent.lda, newdata=test)
+tab <- table(violent.lda.test$class, test$is_recid)
+tab
+
+# Test Accuracy for Violent LDA model is 1254/2469 = 50.790% (note that this is less than the training accuracy)
+
+# TODO: Run a Cox model to compare the accuracy of the violent LDA model to COMPAS' model
+
+# TODO: Determine whether the model is equally predictive across race, age, and gender
+
 
 
 ```
