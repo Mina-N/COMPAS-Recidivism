@@ -18,6 +18,8 @@ library(gam)
 library(plyr)
 library(reshape)
 library(boot)
+library(survival)
+library(ggfortify)
 ```
 
 # To filter compas two years
@@ -45,6 +47,11 @@ compas_non_violent <- mutate(compas_non_violent, crime_factor = factor(c_charge_
       mutate(gender_factor = factor(sex, labels= c("Female","Male"))) %>%
       within(gender_factor <- relevel(gender_factor, ref = 2)) %>%
       mutate(score_factor = factor(score_text != "Low", labels = c("LowScore","HighScore")))
+
+
+
+# Read in cox-parsed csv file
+cox_parsed <- read.csv("./cox-parsed.csv")
 ```
 
 
@@ -80,6 +87,7 @@ test = compas_non_violent[ -index, ] # About 40% of the observations
 
 # NONVIOLENT LDA MODEL
 nonviolent.lda <- lda(is_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + juv_fel_count + juv_misd_count + juv_other_count, data=train)
+nonviolent.lda
 nonviolent.lda.train = predict(nonviolent.lda, type="response")
 tab <- table(nonviolent.lda.train$class, train$is_recid)
 tab
@@ -94,9 +102,54 @@ tab
 
 # Test Accuracy for Nonviolent LDA model is 1652/2469 = 66.910% (note that this is less than the training accuracy)
 
-# TODO: Run a Cox model to compare the accuracy of the nonviolent LDA model to COMPAS' model
+# Run a Cox model to compare the accuracy of the nonviolent LDA model to COMPAS' model
+nonviolent.lda.test$class
+
+# Create new dataframe test_with_labels that appends labels to test dataframe
+test_with_labels <- test
+test_with_labels$nonviolent_lda_labels = nonviolent.lda.test$class
+
+# Write nonviolent lda predictions to cox-parsed-nonviolent-lda.csv 
+cox_parsed_lda = cox_parsed[FALSE,]
+for (i in (1: nrow(test_with_labels))) {
+  new_rows <- subset(cox_parsed, name == as.character(test_with_labels[i,]$name))
+  new_rows$non_violent_lda_labels = test_with_labels[i, ]$nonviolent_lda_labels
+  cox_parsed_lda <- rbind(cox_parsed_lda, new_rows)
+  print(i)
+}
+
+
+write.csv(cox_parsed_lda, "cox-parsed-nonviolent-lda.csv")
+
+data <- filter(filter(read.csv("./cox-parsed-nonviolent-lda.csv"), score_text != "N/A"), end > start) %>%
+        mutate(race_factor = factor(race,
+                                  labels = c("African-American", 
+                                             "Asian",
+                                             "Caucasian", 
+                                             "Hispanic", 
+                                             "Native American",
+                                             "Other"))) %>%
+        within(race_factor <- relevel(race_factor, ref = 3)) %>%
+        mutate(score_factor = factor(score_text)) %>%
+        within(score_factor <- relevel(score_factor, ref=2)) %>%
+        mutate(non_violent_score_factor = factor(non_violent_lda_labels)) %>%
+        within(non_violent_score_factor <- relevel(non_violent_score_factor, ref = 1))
+        
+
+grp <- data[!duplicated(data$id),]
+nrow(grp)
+summary(grp$score_factor)
+summary(grp$race_factor)
+
+f <- Surv(start, end, event, type="counting") ~ non_violent_score_factor
+model <- coxph(f, data=data)
+summary(model)
+
+# Nonviolent LDA model has a concordance of 62.3%
 
 # TODO: Determine whether the model is equally predictive across race, age, and gender
+
+
 
 
 
