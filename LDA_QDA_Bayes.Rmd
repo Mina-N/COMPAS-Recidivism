@@ -57,7 +57,7 @@ cox_parsed <- read.csv("./cox-parsed.csv")
 
 # LDA Analysis
 ```{r}
-# TODO: Feature selection/see what variables are important/build density plots
+# Feature selection/see what variables are important/build density plots
 
 # Check for correlation between input variables
 compas.var.names <- c("priors_count", "juv_fel_count", "juv_misd_count", "juv_other_count")
@@ -93,7 +93,6 @@ tab <- table(nonviolent.lda.train$class, train$is_recid)
 tab
 
 # Training Accuracy for Nonviolent LDA model is 2490/3703 = 67.243% (optimistic estimate)
-# COMPAS system's concordance is 63.6%
 
 # Test the Nonviolent LDA model
 nonviolent.lda.test = predict(nonviolent.lda, newdata=test)
@@ -102,26 +101,52 @@ tab
 
 # Test Accuracy for Nonviolent LDA model is 1652/2469 = 66.910% (note that this is less than the training accuracy)
 
-# Run a Cox model to compare the accuracy of the nonviolent LDA model to COMPAS' model
-nonviolent.lda.test$class
+# TODO: Determine whether nonviolent lda model is equally predictive across race, age, and gender
+
+
+ 
+# VIOLENT LDA MODEL
+violent.lda <- lda(is_violent_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + juv_fel_count + juv_misd_count + juv_other_count, data=train)
+violent.lda
+violent.lda.train = predict(violent.lda, type="response")
+tab <- table(violent.lda.train$class, train$is_recid)
+tab
+
+# Training Accuracy for Violent LDA model is 1947/3703 = 52.579% (optimistic estimate)
+
+# Test the Violent LDA model
+violent.lda.test = predict(violent.lda, newdata=test)
+tab <- table(violent.lda.test$class, test$is_recid)
+tab
+
+# Test Accuracy for Violent LDA model is 1254/2469 = 50.790% (note that this is less than the training accuracy)
+
+
+# TODO: Determine whether violent lda model is equally predictive across race, age, and gender
+
+
+
+
+# Run a Cox model to compare the accuracy of LDA models to COMPAS' model
 
 # Create new dataframe test_with_labels that appends labels to test dataframe
 test_with_labels <- test
 test_with_labels$nonviolent_lda_labels = nonviolent.lda.test$class
+test_with_labels$violent_lda_labels = violent.lda.test$class
 
-# Write nonviolent lda predictions to cox-parsed-nonviolent-lda.csv 
+# Write lda predictions to cox-parsed-lda.csv 
 cox_parsed_lda = cox_parsed[FALSE,]
 for (i in (1: nrow(test_with_labels))) {
   new_rows <- subset(cox_parsed, name == as.character(test_with_labels[i,]$name))
   new_rows$non_violent_lda_labels = test_with_labels[i, ]$nonviolent_lda_labels
+  new_rows$violent_lda_labels = test_with_labels[i, ]$violent_lda_labels
   cox_parsed_lda <- rbind(cox_parsed_lda, new_rows)
-  print(i)
 }
 
 
-write.csv(cox_parsed_lda, "cox-parsed-nonviolent-lda.csv")
+write.csv(cox_parsed_lda, "cox-parsed-lda.csv")
 
-data <- filter(filter(read.csv("./cox-parsed-nonviolent-lda.csv"), score_text != "N/A"), end > start) %>%
+data <- filter(filter(read.csv("./cox-parsed-lda.csv"), score_text != "N/A"), end > start) %>%
         mutate(race_factor = factor(race,
                                   labels = c("African-American", 
                                              "Asian",
@@ -133,46 +158,22 @@ data <- filter(filter(read.csv("./cox-parsed-nonviolent-lda.csv"), score_text !=
         mutate(score_factor = factor(score_text)) %>%
         within(score_factor <- relevel(score_factor, ref=2)) %>%
         mutate(non_violent_score_factor = factor(non_violent_lda_labels)) %>%
-        within(non_violent_score_factor <- relevel(non_violent_score_factor, ref = 1))
-        
-
-grp <- data[!duplicated(data$id),]
-nrow(grp)
-summary(grp$score_factor)
-summary(grp$race_factor)
+        within(non_violent_score_factor <- relevel(non_violent_score_factor, ref = 1)) %>%
+        mutate(violent_score_factor = factor(violent_lda_labels)) %>%
+        within(violent_score_factor <- relevel(violent_score_factor, ref = 1))
+    
 
 f <- Surv(start, end, event, type="counting") ~ non_violent_score_factor
-model <- coxph(f, data=data)
-summary(model)
-
+nonviolent_model <- coxph(f, data=data)
+summary(nonviolent_model)
 # Nonviolent LDA model has a concordance of 62.3%
+# COMPAS system's concordance is 63.6%
 
-# TODO: Determine whether the model is equally predictive across race, age, and gender
-
-
-
-
-
- 
-# VIOLENT LDA MODEL
-violent.lda <- lda(is_violent_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + juv_fel_count + juv_misd_count + juv_other_count, data=train)
-violent.lda.train = predict(violent.lda, type="response")
-tab <- table(violent.lda.train$class, train$is_recid)
-tab
-
-# Training Accuracy for Violent LDA model is 1947/3703 = 52.58% (optimistic estimate)
-# COMPAS's violent recidivism score has a slightly higher overall concordance score of 65.1%
-
-# Test the Violent LDA model
-violent.lda.test = predict(violent.lda, newdata=test)
-tab <- table(violent.lda.test$class, test$is_recid)
-tab
-
-# Test Accuracy for Violent LDA model is 1254/2469 = 50.790% (note that this is less than the training accuracy)
-
-# TODO: Run a Cox model to compare the accuracy of the violent LDA model to COMPAS' model
-
-# TODO: Determine whether the model is equally predictive across race, age, and gender
+f <- Surv(start, end, event, type="counting") ~ violent_score_factor
+violent_model <- coxph(f, data=data)
+summary(violent_model)
+# Violent LDA model has a concordance of 50.2%
+# COMPAS's violent recidivism score has a concordance score of 65.1%
 
 
 
