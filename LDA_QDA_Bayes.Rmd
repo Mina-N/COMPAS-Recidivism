@@ -207,29 +207,11 @@ ct
 
 ```
 
-# Naive Bayes
-```{r}
-# Nonviolent 
-nonviolent.nb <- NaiveBayes(score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent, usekernel=TRUE)
-bayes.probs=predict(nonviolent.nb, type="response")
-out <- table(compas_non_violent$score_text, bayes.probs$class)
-out
-# Accuracy of 3560/6127 = 58.103%
-# COMPAS system's concordance is 63.6%
-
-# Violent
-violent.nb <- NaiveBayes(v_score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent, usekernel=TRUE)
-bayes.probs=predict(violent.nb, type="response")
-out <- table(compas_non_violent$v_score_text, bayes.probs$class)
-out
-# Accuracy of 4166/6127 = 67.994%
-# COMPAS's violent recidivism score has a slightly higher overall concordance score of 65.1%
-```
 
 
 # RAI
 ```{r}
-rai <- function(type=c("lda", "qda", "bayes", "rf", "dec", "reg")) {
+rai <- function(type=c("lda", "qda", "rf", "dec", "reg")) {
   type <- match.arg(type)
   if (type == "lda") {
   }
