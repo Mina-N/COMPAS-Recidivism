@@ -181,33 +181,98 @@ summary(violent_model)
 
 # QDA
 ```{r}
-# Nonviolent
-nonviolent.qda <- qda(score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent)
+
+# Train Nonviolent QDA model
+nonviolent.qda <- qda(is_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + juv_fel_count + juv_misd_count + juv_other_count, data=train)
 nonviolent.qda
-qda.probs=predict(nonviolent.qda,type="response")
-ct <- table(compas_non_violent$score_text, qda.probs$class)
-ct
-# Accuracy is 3843/6172 = 62.265%
+nonviolent.qda.train = predict(nonviolent.qda, type="response")
+tab <- table(nonviolent.qda.train$class, train$is_recid)
+tab
+
+# Training Accuracy for Nonviolent QDA model is 2298/3703 = 62.058 
+
+# Test the Nonviolent QDA model
+nonviolent.qda.test = predict(nonviolent.qda, newdata=test)
+tab <- table(nonviolent.qda.test$class, test$is_recid)
+tab
+
+# Test Accuracy for Nonviolent QDA model is 1550/2469 = 62.778% 
+
+# TODO: Determine whether nonviolent qda model is equally predictive across race, age, and gender
+
+
+ 
+# VIOLENT QDA MODEL
+violent.qda <- qda(is_violent_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + juv_fel_count + juv_misd_count + juv_other_count, data=train)
+violent.qda
+violent.qda.train = predict(violent.qda, type="response")
+tab <- table(violent.qda.train$class, train$is_recid)
+tab
+
+# Training Accuracy for Violent QDA model is 2021/3703 = 54.577% (optimistic estimate)
+
+# Test the Violent QDA model
+violent.qda.test = predict(violent.qda, newdata=test)
+tab <- table(violent.qda.test$class, test$is_recid)
+tab
+
+# Test Accuracy for Violent QDA model is 1342/2469 = 54.354% (note that this is less than the training accuracy)
+
+
+# TODO: Determine whether violent qda model is equally predictive across race, age, and gender
+
+
+
+
+# Run a Cox model to compare the accuracy of QDA models to COMPAS' model
+
+# Create new dataframe test_with_labels that appends labels to test dataframe
+test_with_labels <- test
+test_with_labels$nonviolent_qda_labels = nonviolent.qda.test$class
+test_with_labels$violent_qda_labels = violent.qda.test$class
+
+# Write qda predictions to cox-parsed-qda.csv 
+cox_parsed_qda = cox_parsed[FALSE,]
+for (i in (1: nrow(test_with_labels))) {
+  new_rows <- subset(cox_parsed, name == as.character(test_with_labels[i,]$name))
+  new_rows$non_violent_qda_labels = test_with_labels[i, ]$nonviolent_qda_labels
+  new_rows$violent_qda_labels = test_with_labels[i, ]$violent_qda_labels
+  cox_parsed_qda <- rbind(cox_parsed_qda, new_rows)
+}
+
+
+write.csv(cox_parsed_qda, "cox-parsed-qda.csv")
+
+data <- filter(filter(read.csv("./cox-parsed-qda.csv"), score_text != "N/A"), end > start) %>%
+        mutate(race_factor = factor(race,
+                                  labels = c("African-American", 
+                                             "Asian",
+                                             "Caucasian", 
+                                             "Hispanic", 
+                                             "Native American",
+                                             "Other"))) %>%
+        within(race_factor <- relevel(race_factor, ref = 3)) %>%
+        mutate(score_factor = factor(score_text)) %>%
+        within(score_factor <- relevel(score_factor, ref=2)) %>%
+        mutate(non_violent_score_factor = factor(non_violent_qda_labels)) %>%
+        within(non_violent_score_factor <- relevel(non_violent_score_factor, ref = 1)) %>%
+        mutate(violent_score_factor = factor(violent_qda_labels)) %>%
+        within(violent_score_factor <- relevel(violent_score_factor, ref = 1))
+    
+
+f <- Surv(start, end, event, type="counting") ~ non_violent_score_factor
+nonviolent_model <- coxph(f, data=data)
+summary(nonviolent_model)
+# Nonviolent QDA model has a concordance of 58.9%
 # COMPAS system's concordance is 63.6%
 
-graphics.off()
-par("mar")
-par(mar=c(1,1,1,1))
-partimat(score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent, method="qda", plot.matrix=TRUE)
-
-
-# Violent
-violent.qda <- qda(v_score_text ~ sex_num + age + race_num + c_charge_degree + priors_count + two_year_recid + juv_fel_count + juv_misd_count + juv_other_count, data=compas_non_violent)
-violent.qda
-qda.probs=predict(violent.qda,type="response")
-ct <- table(compas_non_violent$v_score_text, qda.probs$class)
-ct
-# Accuracy is 4212/6172 = 68.244%
-# COMPAS's violent recidivism score has a slightly higher overall concordance score of 65.1%
+f <- Surv(start, end, event, type="counting") ~ violent_score_factor
+violent_model <- coxph(f, data=data)
+summary(violent_model)
+# Violent QDA model has a concordance of 52.7%
+# COMPAS's violent recidivism score has a concordance score of 65.1%
 
 ```
-
-
 
 # RAI
 ```{r}
