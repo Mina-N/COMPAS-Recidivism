@@ -107,7 +107,7 @@ nonviolent.lda.train = predict(nonviolent.lda, type="response")
 tab <- table(nonviolent.lda.train$class, train$is_recid)
 tab
 
-# Training Accuracy for Nonviolent LDA model is 2490/3703 = 67.243% (optimistic estimate)
+# Training Accuracy for Nonviolent LDA model is 2490/3703 = 67.243% (exact numbers will change after every run, but accuracy will remain approximately the same)
 
 # Test the Nonviolent LDA model
 nonviolent.lda.test = predict(nonviolent.lda, newdata=test)
