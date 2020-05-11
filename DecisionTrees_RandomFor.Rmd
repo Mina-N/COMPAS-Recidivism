@@ -1,0 +1,203 @@
+---
+title: "DM Group 19 Decision Tree and Random Forest Analysis"
+author: "Samvrudhi Shankar"
+date: "5/14/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rpart)
+library(randomForest)
+```
+
+Summary:
+
+We seek to explore predictors of recidivism on the Broward County Population by conducting the following analysis:
+(1) Construct an RAI for predicting two-year recidivism on the Broward County population. 
+(2) Construct an RAI for predicting two-year violent recidivism on the Broward County population
+(3) Determine whether each RAI is equally predictive across race, age, and gender
+(4) Compare the performance of our RAIs to COMPAS
+
+This file creates four models: (1) Decision tree to classify people who have committed a criminal offense in Broward County as likely to recidivate or not,  (2) Decision tree to classify people who have committed a criminal offense in Broward County as likely to violently recidivate or not, (3) Random forest to classify people who have committed a criminal offense in Broward County as likely to recidivate or not, and (4) Random forest to classify people who have committed a criminal offense in Broward County as likely to violently recidivate or not. These four models encompass steps 1 and 2 of our analysis above.
+
+
+
+
+
+TODO: UPDATE
+
+The nonviolent LDA model has an accuracy of approximately 67%, whereas the violent LDA model has an accuracy of about 51%. The nonviolent QDA model has an accuracy of approximately 63%, whereas the violent QDA model has an accuracy of about 54%.
+
+Neither the LDA nor the QDA models had higher concordance scores than the COMPAS model. The nonviolent LDA model had a concordance of 62.3% and the nonviolent QDA model had a concordance of 58.9%, whereas COMPAS had a concordance of 63.6% for nonviolent recidivism. The violent LDA model had a concordance of 50.2% and the violent QDA model had a concordance of 52.7%, whereas COMPAS had a concordance of 65.1% for violent recidivism. 
+
+
+```{r}
+# Read in compas data
+compas_non_violent <- read.csv("./compas-scores-two-years.csv")
+compas_non_violent$is_recid <- factor(compas_non_violent$is_recid)
+compas_non_violent$is_violent_recid <- factor(compas_non_violent$is_violent_recid)
+index = sample( 1:nrow( compas_non_violent ), round( nrow( compas_non_violent )*0.6 ), replace = FALSE )
+train = compas_non_violent[ index, ] # About 60% of the observations
+test = compas_non_violent[ -index, ] # About 40% of the observations
+
+# Read in cox proportional hazards data
+cox_parsed <- read.csv("./cox-parsed.csv")
+```
+
+# Decision Tree Analysis
+```{r}
+
+required_columns <- c("sex",
+                      "age",
+                      "race",
+                      "juv_fel_count",
+                      "juv_misd_count",
+                      "juv_other_count",
+                      "priors_count")
+dependent_column_non_violent <- "is_recid"
+formula_non_violent <- paste0(dependent_column_non_violent,
+                              "~",
+                              paste0(required_columns, collapse = "+"))
+
+
+#-----------------------------------------------NONVIOLENT DECISION TREE-----------------------------------------------------------------
+
+dt_object <- rpart(formula_non_violent, data=train)
+dt_value = predict(object=dt_object,
+                   newdata =test[required_columns],
+                   type="class" )
+
+dt_error = sum(test[[dependent_column_non_violent]] != dt_value)  / length(dt_value)
+dt_error
+
+# Create confusion matrix
+tab <- table(dt_value, test$is_recid)
+tab
+
+# Test Accuracy: 1960/2886 = 67.914%
+# Test error rate: 32.086%
+
+
+#-----------------------------------------------VIOLENT DECISION TREE------------------------------------------------------------------------
+
+dependent_column_violent <- "is_violent_recid"
+formula_violent <- paste0(dependent_column_violent,
+                              "~",
+                              paste0(required_columns, collapse = "+"))
+
+dt_object_v <- rpart(formula_violent, data=train)
+dt_value_v = predict(object=dt_object_v,
+                   newdata =test[required_columns],
+                   type="class" )
+dt_error_v = sum(test[[dependent_column_violent]] != dt_value_v)  / length(dt_value_v)
+dt_error_v
+
+# Create confusion matrix
+tab <- table(dt_value_v, test$is_recid)
+tab
+
+# Test Accuracy: 52.772%
+# TODO: Test error rate: 11.885%
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------
+
+
+# Run a Cox Proportional Hazards model to compare the accuracy of the decision trees to COMPAS' model
+
+# Create new dataframe test_with_labels that appends labels to test dataframe
+test_with_labels <- test
+test_with_labels$nonviolent_lda_labels = nonviolent.lda.test$class
+test_with_labels$violent_lda_labels = violent.lda.test$class
+
+# Write lda predictions to cox-parsed-lda.csv 
+cox_parsed_lda = cox_parsed[FALSE,]
+for (i in (1: nrow(test_with_labels))) {
+  new_rows <- subset(cox_parsed, name == as.character(test_with_labels[i,]$name))
+  new_rows$non_violent_lda_labels = test_with_labels[i, ]$nonviolent_lda_labels
+  new_rows$violent_lda_labels = test_with_labels[i, ]$violent_lda_labels
+  cox_parsed_lda <- rbind(cox_parsed_lda, new_rows)
+}
+
+
+write.csv(cox_parsed_lda, "cox-parsed-lda.csv")
+
+data <- filter(filter(read.csv("./cox-parsed-lda.csv"), score_text != "N/A"), end > start) %>%
+        mutate(race_factor = factor(race,
+                                  labels = c("African-American", 
+                                             "Asian",
+                                             "Caucasian", 
+                                             "Hispanic", 
+                                             "Native American",
+                                             "Other"))) %>%
+        within(race_factor <- relevel(race_factor, ref = 3)) %>%
+        mutate(score_factor = factor(score_text)) %>%
+        within(score_factor <- relevel(score_factor, ref=2)) %>%
+        mutate(non_violent_score_factor = factor(non_violent_lda_labels)) %>%
+        within(non_violent_score_factor <- relevel(non_violent_score_factor, ref = 1)) %>%
+        mutate(violent_score_factor = factor(violent_lda_labels)) %>%
+        within(violent_score_factor <- relevel(violent_score_factor, ref = 1))
+    
+
+f <- Surv(start, end, event, type="counting") ~ non_violent_score_factor
+nonviolent_model <- coxph(f, data=data)
+summary(nonviolent_model)
+# Nonviolent LDA model has a concordance of 62.3%
+# COMPAS system's concordance is 63.6%
+
+f <- Surv(start, end, event, type="counting") ~ violent_score_factor
+violent_model <- coxph(f, data=data)
+summary(violent_model)
+# Violent LDA model has a concordance of 50.2%
+# COMPAS's violent recidivism score has a concordance score of 65.1%
+
+
+```
+
+
+# Random Forest Analysis
+```{r}
+
+# -------------------------------------------------------------NONVIOLENT RANDOM FOREST-----------------------------------------------------------
+rf_object <- randomForest(y=train[[dependent_column_non_violent]],
+                          x=train[required_columns])
+
+rf_value = predict(object=rf_object,
+                   newdata =test[required_columns],
+                   type="class" )
+rf_error = sum(test[[dependent_column_non_violent]] != rf_value)  / length(rf_value)
+rf_error
+
+# Create confusion matrix
+tab <- table(rf_value, test$is_recid)
+tab
+
+# Test Accuracy: 68.157%
+# Test Error Rate: 31.982%
+
+
+# -----------------------------------------------------------------VIOLENT RANDOM FOREST-------------------------------------------------------------
+rf_object_v <- randomForest(y=train[[dependent_column_violent]],
+                          x=train[required_columns])
+
+rf_value_v = predict(object=rf_object_v,
+                   newdata =test[required_columns],
+                   type="class" )
+rf_error_v = sum(test[[dependent_column_violent]] != rf_value_v)  / length(rf_value_v)
+rf_error_v
+
+# Create confusion matrix
+tab <- table(rf_value_v, test$is_recid)
+tab
+
+# Test Accuracy: 52.980
+# TODO: Test Error Rate: 11.123%
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Run a Cox Proportional Hazards model to compare the accuracy of the random forests to COMPAS' model
+
+
+```
+
