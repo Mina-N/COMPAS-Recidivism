@@ -32,7 +32,7 @@ We seek to explore predictors of recidivism on the Broward County Population by 
 
 This file creates four models: (1) LDA model to classify people who have committed a criminal offense in Broward County as likely to recidivate or not, (2) LDA model to classify people who have committed a criminal offense in Broward County as likely to violently recidivate or not, (3) QDA model to classify people who have committed a criminal offense in Broward County as likely to recidivate or not, and (4) QDA model to classify people who have committed a criminal offense in Broward County as likely to violently recidivate or not. These four models encompass steps 1 and 2 of our analysis above.
 
-The nonviolent LDA model has an accuracy of approximately 67%, whereas the violent LDA model has an accuracy of about 51%. The nonviolent QDA model has an accuracy of approximately 63%, whereas the violent QDA model has an accuracy of about 54%.
+The nonviolent LDA model has an accuracy of approximately 67%, whereas the violent LDA model has an accuracy of about 88%. The nonviolent QDA model has an accuracy of approximately 63%, whereas the violent QDA model has an accuracy of about 86%.
 
 Neither the LDA nor the QDA models had higher concordance scores than the COMPAS model. The nonviolent LDA model had a concordance of 62.3% and the nonviolent QDA model had a concordance of 58.9%, whereas COMPAS had a concordance of 63.6% for nonviolent recidivism. The violent LDA model had a concordance of 50.2% and the violent QDA model had a concordance of 52.7%, whereas COMPAS had a concordance of 65.1% for violent recidivism. Therefore, we chose not to include the QDA and LDA models in our analysis for steps 3 and 4.  
 
@@ -64,10 +64,14 @@ compas_non_violent <- mutate(compas_non_violent, crime_factor = factor(c_charge_
       within(gender_factor <- relevel(gender_factor, ref = 2)) %>%
       mutate(score_factor = factor(score_text != "Low", labels = c("LowScore","HighScore")))
 
-
-
 # Read in cox proportional hazards data
 cox_parsed <- read.csv("./cox-parsed.csv")
+
+# Create train and test datasets
+set.seed(1)
+index = sample( 1:nrow( compas_non_violent ), round( nrow( compas_non_violent )*0.6 ), replace = FALSE )
+train = compas_non_violent[ index, ] # About 60% of the observations
+test = compas_non_violent[ -index, ] # About 40% of the observations
 ```
 
 
@@ -93,11 +97,6 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
 # No obvious correlation between any predictors, which is good
 pairs(compas_non_violent[,compas.var.names], lower.panel = panel.cor)
 
-# Create train and test datasets
-index = sample( 1:nrow( compas_non_violent ), round( nrow( compas_non_violent )*0.6 ), replace = FALSE )
-train = compas_non_violent[ index, ] # About 60% of the observations
-test = compas_non_violent[ -index, ] # About 40% of the observations
-
 # The code below constructs RAIs for predicting two-year recidivism and two-year violent recidivism on the Broward County population using LDA models and the predictors gender_factor, age_factor, race_factor, crime_factor, priors_count, juv_fel_count, juv_misd_count, and juv_other_count. 
 
 # --------------------------------------NONVIOLENT LDA MODEL---------------------------------------------------
@@ -121,17 +120,17 @@ tab
 violent.lda <- lda(is_violent_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + juv_fel_count + juv_misd_count + juv_other_count, data=train)
 violent.lda
 violent.lda.train = predict(violent.lda, type="response")
-tab <- table(violent.lda.train$class, train$is_recid)
+tab <- table(violent.lda.train$class, train$is_violent_recid)
 tab
 
-# Training Accuracy for Violent LDA model is 1947/3703 = 52.579% (optimistic estimate)
+# Training Accuracy for Violent LDA model is 3291/3703 = 88.874% (optimistic estimate)
 
 # Test the Violent LDA model
 violent.lda.test = predict(violent.lda, newdata=test)
-tab <- table(violent.lda.test$class, test$is_recid)
+tab <- table(violent.lda.test$class, test$is_violent_recid)
 tab
 
-# Test Accuracy for Violent LDA model is 1254/2469 = 50.790% (note that this is less than the training accuracy)
+# Test Accuracy for Violent LDA model is 2175/2469 = 88.092% (note that this is less than the training accuracy)
 
 #---------------------------------------------------------------------------------------------------------------------------
 
@@ -152,7 +151,7 @@ for (i in (1: nrow(test_with_labels))) {
 }
 
 
-write.csv(cox_parsed_lda, "cox-parsed-lda.csv")
+#write.csv(cox_parsed_lda, "cox-parsed-lda.csv")
 
 data <- filter(filter(read.csv("./cox-parsed-lda.csv"), score_text != "N/A"), end > start) %>%
         mutate(race_factor = factor(race,
@@ -213,17 +212,17 @@ tab
 violent.qda <- qda(is_violent_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + juv_fel_count + juv_misd_count + juv_other_count, data=train)
 violent.qda
 violent.qda.train = predict(violent.qda, type="response")
-tab <- table(violent.qda.train$class, train$is_recid)
+tab <- table(violent.qda.train$class, train$is_violent_recid)
 tab
 
-# Training Accuracy for Violent QDA model is 2021/3703 = 54.577% (optimistic estimate)
+# Training Accuracy for Violent QDA model is 3162/3703 = 85.390%
 
 # Test the Violent QDA model
 violent.qda.test = predict(violent.qda, newdata=test)
-tab <- table(violent.qda.test$class, test$is_recid)
+tab <- table(violent.qda.test$class, test$is_violent_recid)
 tab
 
-# Test Accuracy for Violent QDA model is 1342/2469 = 54.354% (note that this is less than the training accuracy)
+# Test Accuracy for Violent QDA model is 2115/2469 = 85.662%
 
 #---------------------------------------------------------------------------------------------------------------------------------
 
@@ -244,7 +243,7 @@ for (i in (1: nrow(test_with_labels))) {
 }
 
 
-write.csv(cox_parsed_qda, "cox-parsed-qda.csv")
+#write.csv(cox_parsed_qda, "cox-parsed-qda.csv")
 
 data <- filter(filter(read.csv("./cox-parsed-qda.csv"), score_text != "N/A"), end > start) %>%
         mutate(race_factor = factor(race,
