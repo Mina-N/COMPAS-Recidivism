@@ -9,6 +9,19 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(rpart)
 library(randomForest)
+library(tidyverse)
+library(ggplot2)
+library(ISLR)
+library(MASS)
+library(klaR) 
+library(knitr)
+library(glmnet)
+library(gam)
+library(plyr)
+library(reshape)
+library(boot)
+library(survival)
+library(ggfortify)
 ```
 
 Summary:
@@ -21,15 +34,9 @@ We seek to explore predictors of recidivism on the Broward County Population by 
 
 This file creates four models: (1) Decision tree to classify people who have committed a criminal offense in Broward County as likely to recidivate or not,  (2) Decision tree to classify people who have committed a criminal offense in Broward County as likely to violently recidivate or not, (3) Random forest to classify people who have committed a criminal offense in Broward County as likely to recidivate or not, and (4) Random forest to classify people who have committed a criminal offense in Broward County as likely to violently recidivate or not. These four models encompass steps 1 and 2 of our analysis above.
 
+The nonviolent decision tree model has an accuracy of approximately 68%, whereas the violent decision tree model has an accuracy of about 53%. The nonviolent random forest model has an accuracy of approximately 68%, whereas the violent random forest model has an accuracy of about 53%.
 
-
-
-
-TODO: UPDATE
-
-The nonviolent LDA model has an accuracy of approximately 67%, whereas the violent LDA model has an accuracy of about 51%. The nonviolent QDA model has an accuracy of approximately 63%, whereas the violent QDA model has an accuracy of about 54%.
-
-Neither the LDA nor the QDA models had higher concordance scores than the COMPAS model. The nonviolent LDA model had a concordance of 62.3% and the nonviolent QDA model had a concordance of 58.9%, whereas COMPAS had a concordance of 63.6% for nonviolent recidivism. The violent LDA model had a concordance of 50.2% and the violent QDA model had a concordance of 52.7%, whereas COMPAS had a concordance of 65.1% for violent recidivism. 
+The nonviolent decision tree model had a concordance of 61.2% and the nonviolent random forest model had a concordance of 62.8%, whereas COMPAS had a concordance of 63.6% for nonviolent recidivism. The violent decision tree model had a concordance of TODO% and the violent random forest model had a concordance of 50.2%, whereas COMPAS had a concordance of 65.1% for violent recidivism. 
 
 
 ```{r}
@@ -108,22 +115,22 @@ tab
 
 # Create new dataframe test_with_labels that appends labels to test dataframe
 test_with_labels <- test
-test_with_labels$nonviolent_lda_labels = nonviolent.lda.test$class
-test_with_labels$violent_lda_labels = violent.lda.test$class
+test_with_labels$nonviolent_dt_labels = dt_value
+test_with_labels$violent_dt_labels = dt_value_v
 
-# Write lda predictions to cox-parsed-lda.csv 
-cox_parsed_lda = cox_parsed[FALSE,]
+# Write decision tree predictions to cox-parsed-dt.csv 
+cox_parsed_dt = cox_parsed[FALSE,]
 for (i in (1: nrow(test_with_labels))) {
   new_rows <- subset(cox_parsed, name == as.character(test_with_labels[i,]$name))
-  new_rows$non_violent_lda_labels = test_with_labels[i, ]$nonviolent_lda_labels
-  new_rows$violent_lda_labels = test_with_labels[i, ]$violent_lda_labels
-  cox_parsed_lda <- rbind(cox_parsed_lda, new_rows)
+  new_rows$non_violent_dt_labels = test_with_labels[i, ]$nonviolent_dt_labels
+  new_rows$violent_dt_labels = test_with_labels[i, ]$violent_dt_labels
+  cox_parsed_dt <- rbind(cox_parsed_dt, new_rows)
 }
 
 
-write.csv(cox_parsed_lda, "cox-parsed-lda.csv")
+write.csv(cox_parsed_dt, "cox-parsed-dt.csv")
 
-data <- filter(filter(read.csv("./cox-parsed-lda.csv"), score_text != "N/A"), end > start) %>%
+data <- filter(filter(read.csv("./cox-parsed-dt.csv"), score_text != "N/A"), end > start) %>%
         mutate(race_factor = factor(race,
                                   labels = c("African-American", 
                                              "Asian",
@@ -134,22 +141,22 @@ data <- filter(filter(read.csv("./cox-parsed-lda.csv"), score_text != "N/A"), en
         within(race_factor <- relevel(race_factor, ref = 3)) %>%
         mutate(score_factor = factor(score_text)) %>%
         within(score_factor <- relevel(score_factor, ref=2)) %>%
-        mutate(non_violent_score_factor = factor(non_violent_lda_labels)) %>%
+        mutate(non_violent_score_factor = factor(non_violent_dt_labels)) %>%
         within(non_violent_score_factor <- relevel(non_violent_score_factor, ref = 1)) %>%
-        mutate(violent_score_factor = factor(violent_lda_labels)) %>%
+        mutate(violent_score_factor = factor(violent_dt_labels)) %>%
         within(violent_score_factor <- relevel(violent_score_factor, ref = 1))
     
 
 f <- Surv(start, end, event, type="counting") ~ non_violent_score_factor
 nonviolent_model <- coxph(f, data=data)
 summary(nonviolent_model)
-# Nonviolent LDA model has a concordance of 62.3%
+# Nonviolent decision tree model has a concordance of 61.2%
 # COMPAS system's concordance is 63.6%
 
 f <- Surv(start, end, event, type="counting") ~ violent_score_factor
 violent_model <- coxph(f, data=data)
 summary(violent_model)
-# Violent LDA model has a concordance of 50.2%
+# TODO: Violent decision tree model has a concordance of ??????
 # COMPAS's violent recidivism score has a concordance score of 65.1%
 
 
@@ -198,6 +205,51 @@ tab
 
 # Run a Cox Proportional Hazards model to compare the accuracy of the random forests to COMPAS' model
 
+# Create new dataframe test_with_labels that appends labels to test dataframe
+test_with_labels <- test
+test_with_labels$nonviolent_rf_labels = rf_value
+test_with_labels$violent_rf_labels = rf_value_v
+
+# Write decision tree predictions to cox-parsed-rf.csv 
+cox_parsed_rf = cox_parsed[FALSE,]
+for (i in (1: nrow(test_with_labels))) {
+  new_rows <- subset(cox_parsed, name == as.character(test_with_labels[i,]$name))
+  new_rows$non_violent_rf_labels = test_with_labels[i, ]$nonviolent_rf_labels
+  new_rows$violent_rf_labels = test_with_labels[i, ]$violent_rf_labels
+  cox_parsed_rf <- rbind(cox_parsed_rf, new_rows)
+}
+
+
+write.csv(cox_parsed_rf, "cox-parsed-rf.csv")
+
+data <- filter(filter(read.csv("./cox-parsed-rf.csv"), score_text != "N/A"), end > start) %>%
+        mutate(race_factor = factor(race,
+                                  labels = c("African-American", 
+                                             "Asian",
+                                             "Caucasian", 
+                                             "Hispanic", 
+                                             "Native American",
+                                             "Other"))) %>%
+        within(race_factor <- relevel(race_factor, ref = 3)) %>%
+        mutate(score_factor = factor(score_text)) %>%
+        within(score_factor <- relevel(score_factor, ref=2)) %>%
+        mutate(non_violent_score_factor = factor(non_violent_rf_labels)) %>%
+        within(non_violent_score_factor <- relevel(non_violent_score_factor, ref = 1)) %>%
+        mutate(violent_score_factor = factor(violent_rf_labels)) %>%
+        within(violent_score_factor <- relevel(violent_score_factor, ref = 1))
+    
+
+f <- Surv(start, end, event, type="counting") ~ non_violent_score_factor
+nonviolent_model <- coxph(f, data=data)
+summary(nonviolent_model)
+# Nonviolent random forest model has a concordance of 62.8%
+# COMPAS system's concordance is 63.6%
+
+f <- Surv(start, end, event, type="counting") ~ violent_score_factor
+violent_model <- coxph(f, data=data)
+summary(violent_model)
+# Violent random forest model has a concordance of 50.2%
+# COMPAS's violent recidivism score has a concordance score of 65.1%
 
 ```
 
