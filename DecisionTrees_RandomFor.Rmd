@@ -83,7 +83,7 @@ dt_error
 tab <- table(dt_value, test$is_recid)
 tab
 
-# Test Accuracy: 1960/2886 = 67.914%
+# Test Accuracy: 1960/2886 = 67.914% (exact numbers will change after every run, but accuracy and error rate will remain approximately the same)
 # Test error rate: 32.086%
 
 
@@ -129,7 +129,7 @@ for (i in (1: nrow(test_with_labels))) {
 }
 
 
-write.csv(cox_parsed_dt, "cox-parsed-dt.csv")
+#write.csv(cox_parsed_dt, "cox-parsed-dt.csv")
 
 data <- filter(filter(read.csv("./cox-parsed-dt.csv"), score_text != "N/A"), end > start) %>%
         mutate(race_factor = factor(race,
@@ -155,8 +155,8 @@ summary(nonviolent_model)
 # COMPAS system's concordance is 63.6%
 
 f <- Surv(start, end, event, type="counting") ~ violent_score_factor
-violent_model <- coxph(f, data=data)
-summary(violent_model)
+#violent_model <- coxph(f, data=data)
+#summary(violent_model)
 # TODO: Violent decision tree model has a concordance of ??????
 # COMPAS's violent recidivism score has a concordance score of 65.1%
 
@@ -221,7 +221,7 @@ for (i in (1: nrow(test_with_labels))) {
 }
 
 
-write.csv(cox_parsed_rf, "cox-parsed-rf.csv")
+#write.csv(cox_parsed_rf, "cox-parsed-rf.csv")
 
 data <- filter(filter(read.csv("./cox-parsed-rf.csv"), score_text != "N/A"), end > start) %>%
         mutate(race_factor = factor(race,
