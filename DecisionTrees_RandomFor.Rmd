@@ -34,7 +34,7 @@ We seek to explore predictors of recidivism on the Broward County Population by 
 
 This file creates four models: (1) Decision tree to classify people who have committed a criminal offense in Broward County as likely to recidivate or not,  (2) Decision tree to classify people who have committed a criminal offense in Broward County as likely to violently recidivate or not, (3) Random forest to classify people who have committed a criminal offense in Broward County as likely to recidivate or not, and (4) Random forest to classify people who have committed a criminal offense in Broward County as likely to violently recidivate or not. These four models encompass steps 1 and 2 of our analysis above.
 
-The nonviolent decision tree model has an accuracy of approximately 68%, whereas the violent decision tree model has an accuracy of about 53%. The nonviolent random forest model has an accuracy of approximately 68%, whereas the violent random forest model has an accuracy of about 53%.
+The nonviolent decision tree model has an accuracy of approximately 68%, whereas the violent decision tree model has an accuracy of about 89%. The nonviolent random forest model has an accuracy of approximately 68%, whereas the violent random forest model has an accuracy of about 89%.
 
 The nonviolent decision tree model had a concordance of 61.2% and the nonviolent random forest model had a concordance of 62.8%, whereas COMPAS had a concordance of 63.6% for nonviolent recidivism. The violent decision tree model had a concordance of TODO% and the violent random forest model had a concordance of 50.2%, whereas COMPAS had a concordance of 65.1% for violent recidivism. 
 
@@ -50,6 +50,7 @@ test = compas_non_violent[ -index, ] # About 40% of the observations
 
 # Read in cox proportional hazards data
 cox_parsed <- read.csv("./cox-parsed.csv")
+
 ```
 
 # Decision Tree Analysis
@@ -101,11 +102,11 @@ dt_error_v = sum(test[[dependent_column_violent]] != dt_value_v)  / length(dt_va
 dt_error_v
 
 # Create confusion matrix
-tab <- table(dt_value_v, test$is_recid)
+tab <- table(observed = test$is_violent_recid, predicted = dt_value_v)
 tab
 
-# Test Accuracy: 52.772%
-# TODO: Test error rate: 11.885%
+# Test Accuracy: 89.085%
+# Test Error Rate: 10.915%
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------
@@ -195,11 +196,11 @@ rf_error_v = sum(test[[dependent_column_violent]] != rf_value_v)  / length(rf_va
 rf_error_v
 
 # Create confusion matrix
-tab <- table(rf_value_v, test$is_recid)
+tab <- table(rf_value_v, test$is_violent_recid)
 tab
 
-# Test Accuracy: 52.980
-# TODO: Test Error Rate: 11.123%
+# Test Accuracy: 89.051%
+# Test Error Rate: 10.949%
 
 #---------------------------------------------------------------------------------------------------------------------------------------------------
 
