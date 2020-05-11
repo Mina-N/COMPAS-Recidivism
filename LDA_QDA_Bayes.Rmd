@@ -100,7 +100,7 @@ test = compas_non_violent[ -index, ] # About 40% of the observations
 
 # The code below constructs RAIs for predicting two-year recidivism and two-year violent recidivism on the Broward County population using LDA models and the predictors gender_factor, age_factor, race_factor, crime_factor, priors_count, juv_fel_count, juv_misd_count, and juv_other_count. 
 
-# NONVIOLENT LDA MODEL
+# --------------------------------------NONVIOLENT LDA MODEL---------------------------------------------------
 nonviolent.lda <- lda(is_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + juv_fel_count + juv_misd_count + juv_other_count, data=train)
 nonviolent.lda
 nonviolent.lda.train = predict(nonviolent.lda, type="response")
@@ -117,7 +117,7 @@ tab
 # Test Accuracy for Nonviolent LDA model is 1652/2469 = 66.910% (note that this is less than the training accuracy)
 
  
-# VIOLENT LDA MODEL
+# -------------------------------------VIOLENT LDA MODEL----------------------------------------------------------
 violent.lda <- lda(is_violent_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + juv_fel_count + juv_misd_count + juv_other_count, data=train)
 violent.lda
 violent.lda.train = predict(violent.lda, type="response")
@@ -133,6 +133,7 @@ tab
 
 # Test Accuracy for Violent LDA model is 1254/2469 = 50.790% (note that this is less than the training accuracy)
 
+#---------------------------------------------------------------------------------------------------------------------------
 
 # Run a Cox Proportional Hazards model to compare the accuracy of the LDA models to COMPAS' model
 
@@ -191,7 +192,7 @@ summary(violent_model)
 
 # The code below constructs RAIs for predicting two-year recidivism and two-year violent recidivism on the Broward County population using QDA models and the predictors gender_factor, age_factor, race_factor, crime_factor, priors_count, juv_fel_count, juv_misd_count, and juv_other_count. 
 
-# Train Nonviolent QDA model
+# -------------------------------------------------NONVIOLENT QDA MODEL----------------------------------------------------------
 nonviolent.qda <- qda(is_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + juv_fel_count + juv_misd_count + juv_other_count, data=train)
 nonviolent.qda
 nonviolent.qda.train = predict(nonviolent.qda, type="response")
@@ -208,7 +209,7 @@ tab
 # Test Accuracy for Nonviolent QDA model is 1550/2469 = 62.778% 
 
  
-# VIOLENT QDA MODEL
+# -----------------------------------------------VIOLENT QDA MODEL------------------------------------------------------------
 violent.qda <- qda(is_violent_recid ~ gender_factor + age_factor + race_factor + crime_factor + priors_count + juv_fel_count + juv_misd_count + juv_other_count, data=train)
 violent.qda
 violent.qda.train = predict(violent.qda, type="response")
@@ -224,6 +225,7 @@ tab
 
 # Test Accuracy for Violent QDA model is 1342/2469 = 54.354% (note that this is less than the training accuracy)
 
+#---------------------------------------------------------------------------------------------------------------------------------
 
 # Run a Cox Proportional Hazards model to compare the accuracy of QDA models to COMPAS' model
 
