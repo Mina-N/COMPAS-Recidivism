@@ -27,8 +27,8 @@ Summary:
 We seek to explore predictors of recidivism on the Broward County Population by conducting the following analysis:
 (1) Construct an RAI for predicting two-year recidivism on the Broward County population. 
 (2) Construct an RAI for predicting two-year violent recidivism on the Broward County population
-(3) Determine whether each RAI is equally predictive across race, age, and gender
-(4) Compare the performance of our RAIs to COMPAS
+(3) Compare the performance of our RAIs to COMPAS
+(4) Determine whether each RAI is equally predictive across race, age, and gender
 
 This file creates four models: (1) LDA model to classify people who have committed a criminal offense in Broward County as likely to recidivate or not, (2) LDA model to classify people who have committed a criminal offense in Broward County as likely to violently recidivate or not, (3) QDA model to classify people who have committed a criminal offense in Broward County as likely to recidivate or not, and (4) QDA model to classify people who have committed a criminal offense in Broward County as likely to violently recidivate or not. These four models encompass steps 1 and 2 of our analysis above.
 
