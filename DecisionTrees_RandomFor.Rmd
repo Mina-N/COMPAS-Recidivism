@@ -319,21 +319,54 @@ print(paste("Female High Hazard:", exp(0.9696), sep=" "))
 # Assigning a 1, or a "high risk" label to a male defendant is more indicative of their likelihood of nonviolently recidivating than assigning a 1 to a female defendant.
 ```
 
+
 # Determine whether random forests are equally predictive across race, age, and gender for violent recidivism
 ```{r}
 
 # ------------------------------------------------------------VIOLENT-----------------------------------------------------------------------
-
 # Race
 
-# Age
+f5 <- Surv(start, end, event, type="counting") ~ race_factor + violent_score_factor + race_factor * violent_score_factor
+model5 <- coxph(f5, data=data)
+print(summary(model5))
 
+# High-risk black defendants (assigned a label of 1) are approx. 3.4 times more likely to violently recidivate than low-risk black defendants (assigned a label of 0).
+print(paste("Black High Hazard:", exp(0.17908 + 1.05811), sep=" "))
+
+# High-risk white defendants (assigned a label of 1) are approx. 2.9 times more likely to violently recidivate than low-risk white defendants (assigned a label of 0).
+print(paste("White High Hazard:", exp(1.05811), sep=" "))
+
+# Assigning a 1, or a "high risk" label to a black defendant is more indicative of their likelihood of violently recidivating than assigning a 1 to a white defendant.
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+# Age
+  
+f6 <- Surv(start, end, event, type="counting") ~ age_factor + violent_score_factor + age_factor * violent_score_factor
+model6 <- coxph(f6, data=data)
+print(summary(model6))
+
+# High-risk defendants over age 45 are approx. 2.9 times more likely to violently recidivate than low-risk defendants over age 45.
+print(paste("Over Age 45 High Hazard:", exp(-0.07077 + 1.13375), sep=" "))
+
+# High-risk defendants under age 25 are approx. 3.1 times more likely to violently recidivate than low-risk defendants under age 25. 
+print(paste("Under Age 25 High Hazard:", exp(1.13375), sep=" "))
+
+# Assigning a 1, or a "high risk" label to a defendant under age 25 is more indicative of their likelihood of violently recidivating than assigning a 1 to a defendant over age 45.
+------------------------------------------------------------------------------------------------------------------------------------------------
 # Gender
   
+f7 <- Surv(start, end, event, type="counting") ~ sex + violent_score_factor + sex * violent_score_factor
+model7 <- coxph(f7, data=data)
+print(summary(model7))
+
+# High-risk male defendants are approx. 3.1 times more likely to violently recidivate than low-risk male defendants.
+print(paste("Male High Hazard:", exp(-0.80590 + 1.94013), sep=" "))
+
+# High-risk female defendants are approx. 7.0 times more likely to violently recidivate than low-risk female defendants.
+print(paste("Female High Hazard:", exp(1.94013), sep=" "))
+
+# Assigning a 1, or a "high risk" label to a female defendant is more indicative of their likelihood of violently recidivating than assigning a 1 to a male defendant.
   
-
-
-
 ```
 
 
