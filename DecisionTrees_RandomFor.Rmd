@@ -53,7 +53,7 @@ cox_parsed <- read.csv("./cox-parsed.csv")
 
 ```
 
-# Decision Tree Analysis
+# Variable Initialization
 ```{r}
 
 required_columns <- c("sex",
@@ -68,7 +68,14 @@ formula_non_violent <- paste0(dependent_column_non_violent,
                               "~",
                               paste0(required_columns, collapse = "+"))
 
+dependent_column_violent <- "is_violent_recid"
+formula_violent <- paste0(dependent_column_violent,
+                              "~",
+                              paste0(required_columns, collapse = "+"))
+```
 
+# Decision Tree Analysis
+```{r}
 #-----------------------------------------------NONVIOLENT DECISION TREE-----------------------------------------------------------------
 
 dt_object <- rpart(formula_non_violent, data=train)
@@ -88,11 +95,6 @@ tab
 
 
 #-----------------------------------------------VIOLENT DECISION TREE------------------------------------------------------------------------
-
-dependent_column_violent <- "is_violent_recid"
-formula_violent <- paste0(dependent_column_violent,
-                              "~",
-                              paste0(required_columns, collapse = "+"))
 
 dt_object_v <- rpart(formula_violent, data=train)
 dt_value_v = predict(object=dt_object_v,
@@ -246,7 +248,11 @@ data <- filter(filter(read.csv("./cox-parsed-rf.csv"), score_text != "N/A"), end
         mutate(non_violent_score_factor = factor(non_violent_rf_labels)) %>%
         within(non_violent_score_factor <- relevel(non_violent_score_factor, ref = 1)) %>%
         mutate(violent_score_factor = factor(violent_rf_labels)) %>%
-        within(violent_score_factor <- relevel(violent_score_factor, ref = 1))
+        within(violent_score_factor <- relevel(violent_score_factor, ref = 1))  %>%
+        mutate(age_factor = factor(age_cat))  %>%
+        within(age_factor <- relevel(age_factor, ref = 3))
+
+levels(data$age_cat)
     
 
 f <- Surv(start, end, event, type="counting") ~ non_violent_score_factor
@@ -264,9 +270,8 @@ summary(violent_model)
 
 ```
 
-
+# Determine whether random forests are equally predictive across race, age, and gender for nonviolent recidivism
 ```{r}
-# Determine whether random forests are equally predictive across race, age, and gender
 
 hist(compas_non_violent$age)
 table(compas_non_violent$age_cat)
@@ -275,16 +280,50 @@ table(compas_non_violent$gender)
 
 # ---------------------------------------------------------NONVIOLENT-------------------------------------------------------------------
 # Race
-f2 <- Surv(start, end, event, type="counting") ~ race_factor + non_violent_score_factor + race_factor * score_factor
-model <- coxph(f2, data=data)
-print(summary(model))
+f2 <- Surv(start, end, event, type="counting") ~ race_factor + non_violent_score_factor + race_factor * non_violent_score_factor
+model2 <- coxph(f2, data=data)
+print(summary(model2))
 
+# High-risk black defendants (assigned a label of 1) are approx. 2.6 times more likely to nonviolently recidivate than low-risk black defendants (assigned a label of 0).
+print(paste("Black High Hazard:", exp(-.1601 + 1.126), sep=" "))
+
+# High-risk white defendants (assigned a label of 1) are approx. 3.1 times more likely to nonviolently recidivate than low-risk white defendants (assigned a label of 0).
+print(paste("White High Hazard:", exp(1.126), sep=" "))
+
+# Assigning a 1, or a "high risk" label to a white defendant is more indicative of their likelihood of nonviolently recidivating than assigning a 1 to a black defendant.
+------------------------------------------------------------------------------------------------------------------------------------------
 # Age
+f3 <- Surv(start, end, event, type="counting") ~ age_factor + non_violent_score_factor + age_factor * non_violent_score_factor
+model3 <- coxph(f3, data=data)
+print(summary(model3))
 
+# High-risk defendants over age 45 are approx. 3.3 times more likely to nonviolently recidivate than low-risk defendants over age 45.
+print(paste("Over Age 45 High Hazard:", exp(0.3026 + 0.8907), sep=" "))
+
+# High-risk defendants under age 25 are approx. 2.4 times more likely to nonviolently recidivate than low-risk defendants under age 25. 
+print(paste("Under Age 25 High Hazard:", exp(0.8907), sep=" "))
+
+# Assigning a 1, or a "high risk" label to a person over age 45 is more indicative of their likelihood of nonviolently recidivating than assigning a 1 to a person under age 25. 
+-------------------------------------------------------------------------------------------------------------------------------------------
 # Gender
+f4 <- Surv(start, end, event, type="counting") ~ sex + non_violent_score_factor + sex * non_violent_score_factor
+model4 <- coxph(f4, data=data)
+print(summary(model4))
 
+# High-risk male defendants are approx. 2.9 times more likely to nonviolently recidivate than low-risk male defendants.
+print(paste("Male High Hazard:", exp(0.0952 + 0.9696), sep=" "))
 
-# ------------------------------------------------------------VIOLENT---------------------------------------------------------------------
+# High-risk female defendants are approx. 2.6 times more likely to nonviolently recidivate than low-risk female defendants.
+print(paste("Female High Hazard:", exp(0.9696), sep=" "))
+
+# Assigning a 1, or a "high risk" label to a male defendant is more indicative of their likelihood of nonviolently recidivating than assigning a 1 to a female defendant.
+```
+
+# Determine whether random forests are equally predictive across race, age, and gender for violent recidivism
+```{r}
+
+# ------------------------------------------------------------VIOLENT-----------------------------------------------------------------------
+
 # Race
 
 # Age
