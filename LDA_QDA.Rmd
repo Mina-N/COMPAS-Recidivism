@@ -132,7 +132,10 @@ tab
 
 # Test Accuracy for Violent LDA model is 2175/2469 = 88.092% (note that this is less than the training accuracy)
 
-#---------------------------------------------------------------------------------------------------------------------------
+```
+
+# Cox Proportional Hazards LDA
+```{r}
 
 # Run a Cox Proportional Hazards model to compare the accuracy of the LDA models to COMPAS' model
 
@@ -224,7 +227,10 @@ tab
 
 # Test Accuracy for Violent QDA model is 2115/2469 = 85.662%
 
-#---------------------------------------------------------------------------------------------------------------------------------
+```
+
+# Cox Proportional Hazards QDA
+```{r}
 
 # Run a Cox Proportional Hazards model to compare the accuracy of QDA models to COMPAS' model
 
