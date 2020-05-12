@@ -109,8 +109,11 @@ tab
 # Test Error Rate: 10.915%
 
 
-#-----------------------------------------------------------------------------------------------------------------------------------------------
+```
 
+
+# Cox Proportional Hazards Decision Tree
+```{r}
 
 # Run a Cox Proportional Hazards model to compare the accuracy of the decision trees to COMPAS' model
 
@@ -153,6 +156,8 @@ nonviolent_model <- coxph(f, data=data)
 summary(nonviolent_model)
 # Nonviolent decision tree model has a concordance of 61.2%
 # COMPAS system's concordance is 63.6%
+
+
 
 f <- Surv(start, end, event, type="counting") ~ violent_score_factor
 #violent_model <- coxph(f, data=data)
@@ -202,7 +207,11 @@ tab
 # Test Accuracy: 89.051%
 # Test Error Rate: 10.949%
 
-#---------------------------------------------------------------------------------------------------------------------------------------------------
+```
+
+
+# Cox Proportional Hazards Random Forest
+```{r}
 
 # Run a Cox Proportional Hazards model to compare the accuracy of the random forests to COMPAS' model
 
@@ -246,6 +255,7 @@ summary(nonviolent_model)
 # Nonviolent random forest model has a concordance of 62.8%
 # COMPAS system's concordance is 63.6%
 
+
 f <- Surv(start, end, event, type="counting") ~ violent_score_factor
 violent_model <- coxph(f, data=data)
 summary(violent_model)
@@ -253,4 +263,39 @@ summary(violent_model)
 # COMPAS's violent recidivism score has a concordance score of 65.1%
 
 ```
+
+
+```{r}
+# Determine whether random forests are equally predictive across race, age, and gender
+
+hist(compas_non_violent$age)
+table(compas_non_violent$age_cat)
+table(compas_non_violent$race)
+table(compas_non_violent$gender)
+
+# ---------------------------------------------------------NONVIOLENT-------------------------------------------------------------------
+# Race
+f2 <- Surv(start, end, event, type="counting") ~ race_factor + non_violent_score_factor + race_factor * score_factor
+model <- coxph(f2, data=data)
+print(summary(model))
+
+# Age
+
+# Gender
+
+
+# ------------------------------------------------------------VIOLENT---------------------------------------------------------------------
+# Race
+
+# Age
+
+# Gender
+  
+  
+
+
+
+```
+
+
 
