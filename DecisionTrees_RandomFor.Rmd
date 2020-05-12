@@ -29,14 +29,18 @@ Summary:
 We seek to explore predictors of recidivism on the Broward County Population by conducting the following analysis:
 (1) Construct an RAI for predicting two-year recidivism on the Broward County population. 
 (2) Construct an RAI for predicting two-year violent recidivism on the Broward County population
-(3) Determine whether each RAI is equally predictive across race, age, and gender
-(4) Compare the performance of our RAIs to COMPAS
+(3) Compare the performance of our RAIs to COMPAS
+(4) Determine whether each RAI is equally predictive across race, age, and gender
 
 This file creates four models: (1) Decision tree to classify people who have committed a criminal offense in Broward County as likely to recidivate or not,  (2) Decision tree to classify people who have committed a criminal offense in Broward County as likely to violently recidivate or not, (3) Random forest to classify people who have committed a criminal offense in Broward County as likely to recidivate or not, and (4) Random forest to classify people who have committed a criminal offense in Broward County as likely to violently recidivate or not. These four models encompass steps 1 and 2 of our analysis above.
 
 The nonviolent decision tree model has an accuracy of approximately 68%, whereas the violent decision tree model has an accuracy of about 89%. The nonviolent random forest model has an accuracy of approximately 68%, whereas the violent random forest model has an accuracy of about 89%.
 
-The nonviolent decision tree model had a concordance of 61.2% and the nonviolent random forest model had a concordance of 62.8%, whereas COMPAS had a concordance of 63.6% for nonviolent recidivism. The violent decision tree model had a concordance of TODO% and the violent random forest model had a concordance of 50.2%, whereas COMPAS had a concordance of 65.1% for violent recidivism. 
+The nonviolent decision tree model had a concordance of 61.2% and the nonviolent random forest model had a concordance of 62.8%, whereas COMPAS had a concordance of 63.6% for nonviolent recidivism. The violent random forest model had a concordance of 50.2%, whereas COMPAS had a concordance of 65.1% for violent recidivism. We were unable to determine the concordance for the violent decision tree model because it predicted that all of the observations were 0, or at low risk for violently recidivating. The cox proportional hazard model that we built to calculate concordance encompasses step 3 of our analysis above. 
+
+Because the violent decision tree model was unable to distinguish between high and low risk defendants, we chose to use random forests only in step 4 of our analysis, where we determined whether random forests are equally predictive across race, age, and gender for nonviolent and violent recidivism. We found that assigning a 1, or a "high risk" label to a white defendant, is more indicative of their likelihood of nonviolently recidivating than assigning a 1 to a black defendant. Assigning a 1, or a "high risk" label to a person over age 45 is more indicative of their likelihood of nonviolently recidivating than assigning a 1 to a person under age 25. Also, assigning a 1, or a "high risk" label to a male defendant is more indicative of their likelihood of nonviolently recidivating than assigning a 1 to a female defendant.
+
+We found that assigning a 1, or a "high risk" label to a black defendant is more indicative of their likelihood of violently recidivating than assigning a 1 to a white defendant. Assigning a 1, or a "high risk" label to a defendant under age 25 is more indicative of their likelihood of violently recidivating than assigning a 1 to a defendant over age 45. In addition, assigning a 1 or a "high risk" label to a female defendant is more indicative of their likelihood of violently recidivating than assigning a 1 to a male defendant. Therefore, the nonviolent and violent random forest models are NOT equally predictive across race, age, or gender.
 
 
 ```{r}
@@ -164,8 +168,7 @@ summary(nonviolent_model)
 f <- Surv(start, end, event, type="counting") ~ violent_score_factor
 #violent_model <- coxph(f, data=data)
 #summary(violent_model)
-# TODO: Violent decision tree model has a concordance of ??????
-# COMPAS's violent recidivism score has a concordance score of 65.1%
+# Unable to calculate concordance of violent decision tree model 
 
 
 ```
