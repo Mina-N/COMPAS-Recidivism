@@ -255,21 +255,45 @@ data <- filter(filter(read.csv("./cox-parsed-rf.csv"), score_text != "N/A"), end
         mutate(age_factor = factor(age_cat))  %>%
         within(age_factor <- relevel(age_factor, ref = 3))
 
-levels(data$age_cat)
+
+white <- filter(data, race == "Caucasian")
+white_fit <- survfit(f, data=white)
+black <- filter(data, race == "African-American")
+black_fit <- survfit(f, data=black)
     
 
-f <- Surv(start, end, event, type="counting") ~ non_violent_score_factor
-nonviolent_model <- coxph(f, data=data)
+f_nonviolent <- Surv(start, end, event, type="counting") ~ non_violent_score_factor
+nonviolent_model <- coxph(f_nonviolent, data=data)
 summary(nonviolent_model)
 # Nonviolent random forest model has a concordance of 62.8%
 # COMPAS system's concordance is 63.6%
 
+# Survival Plot Nonviolent Random Forest
+fit <- survfit(f_nonviolent, data=data)
+plotty <- function(fit, title) {
+  return(autoplot(fit, conf.int=T, censor=F) + ggtitle(title) + ylim(0,1))
+}
+plotty(fit, "Overall Nonviolent")
 
-f <- Surv(start, end, event, type="counting") ~ violent_score_factor
-violent_model <- coxph(f, data=data)
+# People classified as high risk do recidivate at higher rates for nonviolent data.
+
+
+f_violent <- Surv(start, end, event, type="counting") ~ violent_score_factor
+violent_model <- coxph(f_violent, data=data)
 summary(violent_model)
 # Violent random forest model has a concordance of 50.2%
 # COMPAS's violent recidivism score has a concordance score of 65.1%
+
+
+# Survival Plot Violent Random Forest
+fit <- survfit(f_violent, data=data)
+plotty <- function(fit, title) {
+  return(autoplot(fit, conf.int=T, censor=F) + ggtitle(title) + ylim(0,1))
+}
+plotty(fit, "Overall Violent")
+
+# People classified as high risk do recidivate at higher rates for violent data, but the confidence band indicates that this may not always be the case.
+
 
 ```
 
@@ -294,6 +318,11 @@ print(paste("Black High Hazard:", exp(-.1601 + 1.126), sep=" "))
 print(paste("White High Hazard:", exp(1.126), sep=" "))
 
 # Assigning a 1, or a "high risk" label to a white defendant is more indicative of their likelihood of nonviolently recidivating than assigning a 1 to a black defendant.
+
+# Race specific cox models have somewhat similar concordance values, but the concordance for black defendants is lower.
+summary(coxph(f_nonviolent, data=white)) # Concordance of 62.7% 
+summary(coxph(f_nonviolent, data=black)) # Concordance of 61.1%
+
 ------------------------------------------------------------------------------------------------------------------------------------------
 # Age
 f3 <- Surv(start, end, event, type="counting") ~ age_factor + non_violent_score_factor + age_factor * non_violent_score_factor
@@ -340,6 +369,10 @@ print(paste("Black High Hazard:", exp(0.17908 + 1.05811), sep=" "))
 print(paste("White High Hazard:", exp(1.05811), sep=" "))
 
 # Assigning a 1, or a "high risk" label to a black defendant is more indicative of their likelihood of violently recidivating than assigning a 1 to a white defendant.
+
+# Race specific cox models have very similar concordance values
+summary(coxph(f_violent, data=white)) # Concordance of 50.1% 
+summary(coxph(f_violent, data=black)) # Concordance of 50.3%
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
 # Age
