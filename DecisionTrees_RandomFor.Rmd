@@ -22,6 +22,8 @@ library(reshape)
 library(boot)
 library(survival)
 library(ggfortify)
+library(gridExtra)
+library(grid)
 ```
 
 Summary:
@@ -349,6 +351,13 @@ print(paste("Male High Hazard:", exp(0.0952 + 0.9696), sep=" "))
 print(paste("Female High Hazard:", exp(0.9696), sep=" "))
 
 # Assigning a 1, or a "high risk" label to a male defendant is more indicative of their likelihood of nonviolently recidivating than assigning a 1 to a female defendant.
+
+# Survival Plot Females and Males
+female <- filter(data, sex == "Female")
+male   <- filter(data, sex == "Male")
+male_fit <- survfit(f_nonviolent, data=male)
+female_fit <- survfit(f_nonviolent, data=female)
+grid.arrange(plotty(female_fit, "Female"), plotty(male_fit, "Male"),ncol=2)
 ```
 
 
@@ -402,7 +411,11 @@ print(paste("Male High Hazard:", exp(-0.80590 + 1.94013), sep=" "))
 print(paste("Female High Hazard:", exp(1.94013), sep=" "))
 
 # Assigning a 1, or a "high risk" label to a female defendant is more indicative of their likelihood of violently recidivating than assigning a 1 to a male defendant.
-  
+
+# Survival Plot Females and Males
+male_fit <- survfit(f_violent, data=male)
+female_fit <- survfit(f_violent, data=female)
+grid.arrange(plotty(female_fit, "Female"), plotty(male_fit, "Male"),ncol=2)
 ```
 
 
